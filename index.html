@@ -1,0 +1,187 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Widnae et Stella | Online Mark Entry</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: Arial, sans-serif;
+    }
+
+    body {
+      min-height: 100vh;
+      background: #f3f6fb;
+      color: #17243a;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      background: #102b50;
+      color: white;
+      padding: 22px 7%;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .school-mark {
+      width: 46px;
+      height: 46px;
+      border: 2px solid #ffffff80;
+      border-radius: 10px;
+      display: grid;
+      place-items: center;
+      font-size: 20px;
+      font-weight: bold;
+    }
+
+    header h1 {
+      font-size: 19px;
+      margin-bottom: 4px;
+    }
+
+    header p {
+      font-size: 12px;
+      color: #cbd8e9;
+    }
+
+    main {
+      flex: 1;
+      display: grid;
+      place-items: center;
+      padding: 35px 18px;
+    }
+
+    .login-card {
+      background: white;
+      width: 100%;
+      max-width: 430px;
+      padding: 38px 32px;
+      border-radius: 14px;
+      box-shadow: 0 8px 35px #17243a12;
+      text-align: center;
+    }
+
+    .login-card h2 {
+      font-size: 24px;
+      margin-bottom: 10px;
+    }
+
+    .intro {
+      color: #68778c;
+      font-size: 14px;
+      line-height: 1.6;
+      margin-bottom: 28px;
+    }
+
+    .divider {
+      height: 1px;
+      background: #e7ebf1;
+      margin: 22px 0;
+    }
+
+    .notice {
+      background: #f1f5fa;
+      border: 1px solid #e1e8f0;
+      border-radius: 9px;
+      padding: 15px;
+      color: #53647a;
+      font-size: 13px;
+      line-height: 1.6;
+      text-align: left;
+    }
+
+    .notice strong {
+      display: block;
+      color: #243b59;
+      margin-bottom: 5px;
+    }
+
+    .signin-button {
+      width: 100%;
+      border: 1px solid #d8dee8;
+      border-radius: 8px;
+      background: #f8f9fb;
+      color: #8490a0;
+      padding: 13px;
+      font-size: 14px;
+      font-weight: bold;
+      cursor: not-allowed;
+      margin-top: 22px;
+    }
+
+    .status {
+      margin-top: 12px;
+      font-size: 12px;
+      color: #8a6b2c;
+    }
+
+    footer {
+      text-align: center;
+      padding: 20px;
+      color: #8995a5;
+      font-size: 12px;
+    }
+
+    @media (max-width: 480px) {
+      header {
+        padding: 18px;
+      }
+
+      .login-card {
+        padding: 30px 22px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <header>
+    <div class="school-mark">WES</div>
+    <div>
+      <h1>Widnae et Stella</h1>
+      <p>Online Academic Mark Entry Portal</p>
+    </div>
+  </header>
+
+  <main>
+    <section class="login-card">
+      <h2>Welcome</h2>
+
+      <p class="intro">
+        Sign in to access the school's online mark entry system.
+        Only authorised school personnel can access this portal.
+      </p>
+
+      <div class="divider"></div>
+
+      <div class="notice">
+        <strong>Secure Staff Access</strong>
+        Access requires an authorised Google account and
+        the appropriate class-subject credentials.
+      </div>
+
+      <button class="signin-button" disabled>
+        Google Sign-in — Coming Soon
+      </button>
+
+      <p class="status">
+        Authentication setup is in progress.
+      </p>
+    </section>
+  </main>
+
+  <footer>
+    Widnae et Stella &copy; 2026 · Online Mark Entry System
+  </footer>
+
+</body>
+</html>
