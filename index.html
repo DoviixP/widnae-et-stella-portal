@@ -2,6 +2,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Widnae et Stella | Online Mark Entry</title>
@@ -169,19 +170,111 @@
         the appropriate class-subject credentials.
       </div>
 
-      <button class="signin-button" disabled>
-        Google Sign-in — Coming Soon
-      </button>
+<div id="googleSignInButton"></div>
 
-      <p class="status">
-        Authentication setup is in progress.
-      </p>
+<p class="status" id="authStatus">
+  Sign in using your authorised Google account.
+</p>
     </section>
   </main>
 
   <footer>
     Widnae et Stella &copy; 2026 · Online Mark Entry System
   </footer>
+<script>
+  
+const GOOGLE_CLIENT_ID =
+  "633639912726-7snnanudndtjpi8so7jdq7lpvm00h86a.apps.googleusercontent.com";
 
+const API_URL =
+  "https://widnae-et-stella-api.kingsollomon237.workers.dev/api";
+
+const statusElement = document.getElementById("authStatus");
+
+function showStatus(message, isError = false) {
+  statusElement.textContent = message;
+  statusElement.style.color = isError ? "#c0392b" : "#53647a";
+}
+
+async function handleGoogleSignIn(response) {
+  showStatus("Verifying your Google account...");
+
+  try {
+    const apiResponse = await fetch(API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        action: "authenticateGoogleIdToken",
+        payload: {
+          idToken: response.credential
+        }
+      })
+    });
+
+    const data = await apiResponse.json();
+
+    if (!apiResponse.ok || !data.ok) {
+      throw new Error(
+        data.error || data.message || "Authentication failed."
+      );
+    }
+
+    const user = data.result;
+
+    if (!user || !user.success || !user.token) {
+      throw new Error("The server returned an invalid login response.");
+    }
+
+    // Keep the application session, not the Google ID token.
+    sessionStorage.setItem("wes_session_token", user.token);
+
+    showStatus(
+      "Signed in successfully as " +
+      user.email +
+      " (" + user.role + ")."
+    );
+
+    console.log("Authenticated user:", {
+      email: user.email,
+      role: user.role,
+      schoolName: user.schoolName
+    });
+
+  } catch (error) {
+    console.error("Sign-in error:", error);
+    showStatus(error.message || "Unable to sign in.", true);
+  }
+}
+
+function initialiseGoogleSignIn() {
+  if (!window.google || !google.accounts || !google.accounts.id) {
+    showStatus("Google Sign-in could not load. Refresh the page.", true);
+    return;
+  }
+
+  google.accounts.id.initialize({
+    client_id: GOOGLE_CLIENT_ID,
+    callback: handleGoogleSignIn
+  });
+
+  google.accounts.id.renderButton(
+    document.getElementById("googleSignInButton"),
+    {
+      theme: "outline",
+      size: "large",
+      shape: "rectangular",
+      text: "signin_with",
+      width: 300
+    }
+  );
+}
+
+window.addEventListener("load", () => {
+  initialiseGoogleSignIn();
+});
+
+</script>
 </body>
 </html>
