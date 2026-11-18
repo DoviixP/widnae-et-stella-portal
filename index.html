@@ -318,7 +318,7 @@ async function handleGoogleSignIn(response) {
 sessionStorage.setItem("wes_session_token", user.token);
 
 showDashboard(user);
-    });
+    
 
   } catch (error) {
     console.error("Sign-in error:", error);
