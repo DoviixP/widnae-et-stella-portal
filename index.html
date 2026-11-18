@@ -1,4 +1,4 @@
-
+ 
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -135,7 +135,63 @@
       header {
         padding: 18px;
       }
+.dashboard {
+  width: 100%;
+  max-width: 1000px;
+  margin: 30px auto;
+  padding: 25px;
+  box-sizing: border-box;
+}
 
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 30px;
+}
+
+.dashboard-header h1 {
+  margin-bottom: 5px;
+}
+
+.dashboard-header p {
+  margin-top: 0;
+  color: #64748b;
+}
+
+.user-panel,
+.portal-status {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 22px;
+  margin-bottom: 20px;
+}
+
+.user-panel h2,
+.portal-status h3 {
+  margin-top: 0;
+}
+
+#userRole {
+  display: inline-block;
+  background: #e8f0ff;
+  color: #2455a4;
+  padding: 7px 12px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+#logoutButton {
+  border: none;
+  background: #dc3545;
+  color: white;
+  padding: 11px 18px;
+  border-radius: 7px;
+  cursor: pointer;
+}
       .login-card {
         padding: 30px 22px;
       }
@@ -176,6 +232,37 @@
   Sign in using your authorised Google account.
 </p>
     </section>
+
+    <section id="dashboard" class="dashboard" style="display: none;">
+
+  <div class="dashboard-header">
+    <div>
+      <h1>Widnae et Stella</h1>
+      <p>Academic Mark Management Portal</p>
+    </div>
+
+    <button id="logoutButton" onclick="logoutUser()">
+      Sign Out
+    </button>
+  </div>
+
+  <div class="user-panel">
+    <h2>Welcome</h2>
+    <p id="userEmail"></p>
+    <span id="userRole"></span>
+  </div>
+
+  <div class="portal-status">
+    <h3>Portal Status</h3>
+    <p id="portalStatus">Checking portal status...</p>
+    <p id="portalMessage"></p>
+  </div>
+
+  <div id="dashboardContent">
+    <!-- Role-specific dashboard content will appear here -->
+  </div>
+
+</section>
   </main>
 
   <footer>
@@ -228,18 +315,9 @@ async function handleGoogleSignIn(response) {
     }
 
     // Keep the application session, not the Google ID token.
-    sessionStorage.setItem("wes_session_token", user.token);
+sessionStorage.setItem("wes_session_token", user.token);
 
-    showStatus(
-      "Signed in successfully as " +
-      user.email +
-      " (" + user.role + ")."
-    );
-
-    console.log("Authenticated user:", {
-      email: user.email,
-      role: user.role,
-      schoolName: user.schoolName
+showDashboard(user);
     });
 
   } catch (error) {
@@ -274,7 +352,141 @@ function initialiseGoogleSignIn() {
 window.addEventListener("load", () => {
   initialiseGoogleSignIn();
 });
+async function showDashboard(user) {
+  document.getElementById("googleSignInButton").parentElement.style.display = "none";
 
+  document.getElementById("dashboard").style.display = "block";
+
+  document.getElementById("userEmail").textContent = user.email;
+
+  document.getElementById("userRole").textContent =
+    user.role.replace(/_/g, " ");
+
+  const content = document.getElementById("dashboardContent");
+
+  if (user.role === "SUPER_ADMIN") {
+    content.innerHTML = `
+      <div class="user-panel">
+        <h2>Super Admin Dashboard</h2>
+        <p>Welcome to the highest-level administration area.</p>
+      </div>
+    `;
+  } else if (user.role === "SCHOOL_ADMIN") {
+    content.innerHTML = `
+      <div class="user-panel">
+        <h2>School Admin Dashboard</h2>
+        <p>Manage teachers, classes, subjects and portal access.</p>
+      </div>
+    `;
+  } else {
+    content.innerHTML = `
+      <div class="user-panel">
+        <h2>Teacher Dashboard</h2>
+        <p>Your assigned classes and subjects will appear here.</p>
+      </div>
+    `;
+  }
+
+  await loadPortalState();
+}
+
+
+async function loadPortalState() {
+  const token = sessionStorage.getItem("wes_session_token");
+
+  if (!token) {
+    showLogin();
+    return;
+  }
+
+  const status = document.getElementById("portalStatus");
+  const message = document.getElementById("portalMessage");
+
+  status.textContent = "Checking portal status...";
+
+  try {
+    const response = await fetch(API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        action: "getMyPortalState",
+        payload: {
+          token: token
+        }
+      })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok || !data.ok) {
+      throw new Error(data.error || "Could not retrieve portal status.");
+    }
+
+    const state = data.result;
+
+    if (!state || state.success === false) {
+      throw new Error(state?.message || "Your session is no longer valid.");
+    }
+
+    status.textContent = state.portalOpen ? "OPEN" : "LOCKED";
+
+    status.style.color = state.portalOpen ? "#16803c" : "#dc3545";
+
+    message.textContent = state.portalMessage || "";
+
+  } catch (error) {
+    console.error("Portal status error:", error);
+    status.textContent = "Unable to retrieve status";
+    message.textContent = error.message;
+
+    if (
+      error.message.toLowerCase().includes("session") ||
+      error.message.toLowerCase().includes("expired")
+    ) {
+      sessionStorage.removeItem("wes_session_token");
+      showLogin();
+    }
+  }
+}
+
+
+function showLogin() {
+  document.getElementById("dashboard").style.display = "none";
+
+  document.getElementById("googleSignInButton").parentElement.style.display = "block";
+}
+
+
+async function logoutUser() {
+  const token = sessionStorage.getItem("wes_session_token");
+
+  try {
+    if (token) {
+      await fetch(API_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          action: "logout",
+          payload: {
+            token: token
+          }
+        })
+      });
+    }
+  } catch (error) {
+    console.error("Logout error:", error);
+  }
+
+  sessionStorage.removeItem("wes_session_token");
+
+  showLogin();
+
+  showStatus("You have signed out successfully.");
+}
 </script>
 </body>
 </html>
