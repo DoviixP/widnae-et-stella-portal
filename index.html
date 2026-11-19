@@ -417,6 +417,30 @@
   .teacher-management { padding: 16px; }
 }
 
+
+.assignment-management {
+  background:#fff; border:1px solid #e2e8f0; border-radius:12px;
+  padding:22px; margin:22px 0;
+}
+.assignment-form {
+  display:grid; grid-template-columns:1fr 1fr auto; gap:10px; margin:18px 0;
+}
+.assignment-form select {
+  min-width:0; width:100%; padding:11px 12px;
+  border:1px solid #d8dee8; border-radius:7px; background:#fff;
+}
+.assignment-form button, .assignment-table button {
+  border:0; border-radius:7px; padding:10px 12px; cursor:pointer; font-weight:600;
+}
+.assignment-table-wrap {overflow-x:auto;}
+.assignment-table {width:100%; border-collapse:collapse; min-width:650px;}
+.assignment-table th,.assignment-table td {
+  padding:12px 10px; border-bottom:1px solid #e8edf3; text-align:left; font-size:13px;
+}
+.assignment-table th {color:#53647a;background:#f8fafc;}
+#assignmentFeedback {margin:12px 0;font-size:13px;}
+@media(max-width:700px){.assignment-form{grid-template-columns:1fr}.assignment-management{padding:16px}}
+
   </style>
 </head>
 
@@ -619,6 +643,32 @@ function teacherManagementMarkup() {
     </section>`;
 }
 
+function assignmentManagementMarkup() {
+  return `
+    <section class="assignment-management">
+      <h2>Teacher Assignment Management</h2>
+      <p>Assign an active teacher to a class and subject.</p>
+      <form class="assignment-form" onsubmit="createTeacherAssignment(event)">
+        <select id="assignmentTeacher" required>
+          <option value="">Select teacher</option>
+        </select>
+        <select id="assignmentClassSubject" required>
+          <option value="">Select class and subject</option>
+        </select>
+        <button class="teacher-primary" type="submit">Assign</button>
+      </form>
+      <p id="assignmentFeedback" role="status"></p>
+      <div class="assignment-table-wrap">
+        <table class="assignment-table">
+          <thead><tr><th>Teacher</th><th>Class</th><th>Subject</th><th>Status</th><th>Action</th></tr></thead>
+          <tbody id="assignmentTableBody">
+            <tr><td colspan="5">Loading assignments...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>`;
+}
+
 async function showDashboard(user) {
   document.getElementById("loginSection").style.display = "none";
   document.getElementById("dashboard").style.display = "block";
@@ -705,11 +755,13 @@ async function showDashboard(user) {
 
       <p id="dashboardError" class="status"></p>
       ${teacherManagementMarkup()}
+      ${assignmentManagementMarkup()}
     `;
 
     await loadSuperAdminDashboard();
     await loadPortalControlSettings();
     await loadTeacherManagement();
+    await loadTeacherAssignments();
 
   } else if (user.role === "SCHOOL_ADMIN") {
     content.innerHTML = `
@@ -718,8 +770,10 @@ async function showDashboard(user) {
         <p>Manage teachers and their portal access for your school.</p>
       </div>
       ${teacherManagementMarkup()}
+      ${assignmentManagementMarkup()}
     `;
     await loadTeacherManagement();
+    await loadTeacherAssignments();
 
   } else {
     content.innerHTML = `
@@ -1132,6 +1186,96 @@ async function changeTeacherStatus(teacherId, status) {
     }
   } catch (error) {
     teacherFeedback(error.message, true);
+  }
+}
+
+let teacherAssignmentData = {teachers:[], classSubjects:[], assignments:[]};
+
+function assignmentFeedback(message, error = false) {
+  const el = document.getElementById("assignmentFeedback");
+  if (!el) return;
+  el.textContent = message || "";
+  el.style.color = error ? "#dc3545" : "#16803c";
+}
+
+async function loadTeacherAssignments() {
+  const body = document.getElementById("assignmentTableBody");
+  if (!body) return;
+  body.innerHTML = '<tr><td colspan="5">Loading assignments...</td></tr>';
+  try {
+    teacherAssignmentData = await portalControlRequest("getTeacherAssignmentData");
+    const teacherSelect = document.getElementById("assignmentTeacher");
+    const pairSelect = document.getElementById("assignmentClassSubject");
+    teacherSelect.innerHTML = '<option value="">Select teacher</option>' +
+      teacherAssignmentData.teachers.map(t =>
+        `<option value="${escapeTeacherText(t.teacherId)}">${escapeTeacherText(t.name)} — ${escapeTeacherText(t.email)}</option>`
+      ).join("");
+    pairSelect.innerHTML = '<option value="">Select class and subject</option>' +
+      teacherAssignmentData.classSubjects.map(x =>
+        `<option value="${escapeTeacherText(x.classSubjectId)}">${escapeTeacherText(x.className)} — ${escapeTeacherText(x.subjectName)}</option>`
+      ).join("");
+    renderTeacherAssignments();
+    if (!teacherAssignmentData.teachers.length) {
+      assignmentFeedback("Register and activate teachers before assigning subjects.", true);
+    } else if (!teacherAssignmentData.classSubjects.length) {
+      assignmentFeedback("No active class-subject combinations are available yet. Sync classes and subjects from the Electron app first.", true);
+    } else {
+      assignmentFeedback("");
+    }
+  } catch (error) {
+    body.innerHTML = '<tr><td colspan="5">Unable to load assignments.</td></tr>';
+    assignmentFeedback(error.message, true);
+  }
+}
+
+function renderTeacherAssignments() {
+  const body = document.getElementById("assignmentTableBody");
+  if (!body) return;
+  const items = teacherAssignmentData.assignments || [];
+  if (!items.length) {
+    body.innerHTML = '<tr><td colspan="5">No teacher assignments yet.</td></tr>';
+    return;
+  }
+  body.innerHTML = items.map(a => {
+    const active = a.status === "ACTIVE";
+    return `<tr>
+      <td><strong>${escapeTeacherText(a.teacherName)}</strong><br><small>${escapeTeacherText(a.teacherEmail)}</small></td>
+      <td>${escapeTeacherText(a.className)}</td>
+      <td>${escapeTeacherText(a.subjectName)}</td>
+      <td><span class="teacher-pill ${active ? "active" : "inactive"}">${active ? "ACTIVE" : "REMOVED"}</span></td>
+      <td><button class="${active ? "teacher-danger" : "teacher-success"}"
+        onclick="setTeacherAssignmentStatus('${escapeTeacherText(a.assignmentId)}','${active ? "INACTIVE" : "ACTIVE"}')">
+        ${active ? "Remove" : "Restore"}</button></td>
+    </tr>`;
+  }).join("");
+}
+
+async function createTeacherAssignment(event) {
+  event.preventDefault();
+  const teacherId = document.getElementById("assignmentTeacher").value;
+  const classSubjectId = document.getElementById("assignmentClassSubject").value;
+  if (!teacherId || !classSubjectId) {
+    assignmentFeedback("Select both a teacher and a class-subject combination.", true);
+    return;
+  }
+  try {
+    const result = await portalControlRequest("saveTeacherAssignment", {teacherId, classSubjectId});
+    assignmentFeedback(result.message || "Teacher assigned.");
+    await loadTeacherAssignments();
+  } catch (error) {
+    assignmentFeedback(error.message, true);
+  }
+}
+
+async function setTeacherAssignmentStatus(assignmentId, status) {
+  const verb = status === "ACTIVE" ? "restore" : "remove";
+  if (!confirm("Are you sure you want to " + verb + " this assignment?")) return;
+  try {
+    const result = await portalControlRequest("updateTeacherAssignmentStatus", {assignmentId, status});
+    assignmentFeedback(result.message);
+    await loadTeacherAssignments();
+  } catch (error) {
+    assignmentFeedback(error.message, true);
   }
 }
 
