@@ -304,6 +304,53 @@
         padding: 30px 22px;
       }
     }
+ 
+.portal-controls {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 22px;
+  margin-bottom: 22px;
+}
+
+.control-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 16px 0;
+}
+
+.control-actions button,
+.control-save {
+  border: 0;
+  border-radius: 7px;
+  padding: 12px 18px;
+  color: white;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.btn-open { background: #16803c; }
+.btn-lock { background: #dc3545; }
+.btn-schedule { background: #2455a4; }
+
+.portal-controls input,
+.portal-controls textarea {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #d8dee8;
+  border-radius: 7px;
+  margin: 8px 0 14px;
+}
+
+.portal-controls label {
+  font-weight: 600;
+  display: block;
+}
+
+.control-save { background: #102b50; }
+#controlFeedback { margin-top: 12px; }
+
   </style>
 </head>
 
@@ -482,6 +529,41 @@ async function showDashboard(user) {
           <small id="activeTeachers">Loading...</small>
         </div>
 
+        
+<div class="portal-controls">
+  <h2>Portal Control</h2>
+  <p>Manage online mark entry availability.</p>
+
+  <div class="control-actions">
+    <button class="btn-open" onclick="changePortalStatus('OPEN')">
+      Open Portal
+    </button>
+
+    <button class="btn-lock" onclick="changePortalStatus('LOCK')">
+      Lock Portal
+    </button>
+  </div>
+
+  <label for="reopenAt">Schedule reopening</label>
+  <input type="datetime-local" id="reopenAt">
+
+  <button class="btn-schedule"
+    onclick="schedulePortalOpening()">
+    Schedule Reopening
+  </button>
+
+  <hr style="margin:20px 0;border:0;border-top:1px solid #e2e8f0">
+
+  <label for="lockMessage">Portal lock message</label>
+  <textarea id="lockMessage" rows="3"></textarea>
+
+  <button class="control-save" onclick="saveLockMessage()">
+    Save Message
+  </button>
+
+  <p id="controlFeedback"></p>
+</div>
+
         <div class="stat-card">
           <span>School Administrators</span>
           <strong id="totalAdmins">—</strong>
@@ -511,7 +593,8 @@ async function showDashboard(user) {
       <p id="dashboardError" class="status"></p>
     `;
 
-    await loadSuperAdminDashboard();
+ await loadSuperAdminDashboard();
+await loadPortalControlSettings();
 
   } else if (user.role === "SCHOOL_ADMIN") {
     content.innerHTML = `
@@ -690,6 +773,115 @@ function showLogin() {
 }
 
 
+async function portalControlRequest(action, extra = {}) {
+  const response = await fetch(API_URL, {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({
+      action,
+      payload: {
+        token: sessionStorage.getItem("wes_session_token"),
+        ...extra
+      }
+    })
+  });
+
+  const data = await response.json();
+
+  if (!response.ok || !data.ok) {
+    throw new Error(data.error || "Request failed.");
+  }
+
+  return data.result;
+}
+
+function controlFeedback(message, error = false) {
+  const el = document.getElementById("controlFeedback");
+  el.textContent = message;
+  el.style.color = error ? "#dc3545" : "#16803c";
+}
+
+async function loadPortalControlSettings() {
+  try {
+    const result = await portalControlRequest(
+      "getPortalControlSettings"
+    );
+
+    document.getElementById("lockMessage").value =
+      result.lockMessage || "";
+
+    const status = document.getElementById("portalStatus");
+    status.textContent = result.portalOpen ? "OPEN" : "LOCKED";
+    status.style.color = result.portalOpen ? "#16803c" : "#dc3545";
+
+    if (result.reopenAt) {
+      const date = new Date(result.reopenAt);
+      const local = new Date(
+        date.getTime() - date.getTimezoneOffset() * 60000
+      );
+      document.getElementById("reopenAt").value =
+        local.toISOString().slice(0, 16);
+    }
+  } catch (error) {
+    controlFeedback(error.message, true);
+  }
+}
+
+async function changePortalStatus(action) {
+  const label = action === "OPEN" ? "open" : "lock";
+
+  if (!confirm("Are you sure you want to " + label + " the portal?")) {
+    return;
+  }
+
+  try {
+    await portalControlRequest("updatePortalControl", {action});
+    controlFeedback("Portal successfully updated.");
+    await loadPortalControlSettings();
+    await loadPortalState();
+  } catch (error) {
+    controlFeedback(error.message, true);
+  }
+}
+
+async function schedulePortalOpening() {
+  const value = document.getElementById("reopenAt").value;
+
+  if (!value) {
+    controlFeedback("Select a reopening date and time.", true);
+    return;
+  }
+
+  try {
+    await portalControlRequest("updatePortalControl", {
+      action: "SCHEDULE",
+      reopenAt: new Date(value).toISOString()
+    });
+
+    controlFeedback("Automatic reopening scheduled.");
+    await loadPortalControlSettings();
+    await loadPortalState();
+  } catch (error) {
+    controlFeedback(error.message, true);
+  }
+}
+
+async function saveLockMessage() {
+  const message = document.getElementById("lockMessage").value.trim();
+
+  try {
+    await portalControlRequest("updatePortalControl", {
+      action: "MESSAGE",
+      message
+    });
+
+    controlFeedback("Lock message saved.");
+    await loadPortalControlSettings();
+  } catch (error) {
+    controlFeedback(error.message, true);
+  }
+}
+ 
 async function logoutUser() {
   const token = sessionStorage.getItem("wes_session_token");
 
