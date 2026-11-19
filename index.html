@@ -351,6 +351,72 @@
 .control-save { background: #102b50; }
 #controlFeedback { margin-top: 12px; }
 
+
+.teacher-management {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 22px;
+  margin: 22px 0;
+}
+.teacher-management h2 { margin-bottom: 8px; }
+.teacher-toolbar {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 18px 0;
+}
+.teacher-toolbar input, .teacher-toolbar select,
+.teacher-form input {
+  min-width: 0;
+  padding: 11px 12px;
+  border: 1px solid #d8dee8;
+  border-radius: 7px;
+  background: #fff;
+}
+.teacher-toolbar input { flex: 1; }
+.teacher-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 10px;
+  margin: 18px 0 22px;
+}
+.teacher-form button, .teacher-table button {
+  border: 0;
+  border-radius: 7px;
+  padding: 10px 12px;
+  cursor: pointer;
+  font-weight: 600;
+}
+.teacher-primary { background: #102b50; color: #fff; }
+.teacher-action { background: #e8f0ff; color: #2455a4; margin: 2px; }
+.teacher-danger { background: #fde8e8; color: #b42318; margin: 2px; }
+.teacher-success { background: #e7f6ec; color: #16803c; margin: 2px; }
+.teacher-table-wrap { overflow-x: auto; }
+.teacher-table { width: 100%; border-collapse: collapse; min-width: 680px; }
+.teacher-table th, .teacher-table td {
+  padding: 12px 10px;
+  border-bottom: 1px solid #e8edf3;
+  text-align: left;
+  font-size: 13px;
+}
+.teacher-table th { color: #53647a; background: #f8fafc; }
+.teacher-pill {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  background: #eef2f6;
+}
+.teacher-pill.active { background: #e7f6ec; color: #16803c; }
+.teacher-pill.inactive { background: #fde8e8; color: #b42318; }
+#teacherFeedback { margin: 12px 0; font-size: 13px; }
+@media (max-width: 700px) {
+  .teacher-form { grid-template-columns: 1fr; }
+  .teacher-management { padding: 16px; }
+}
+
   </style>
 </head>
 
@@ -508,6 +574,51 @@ window.addEventListener("load", () => {
   initialiseGoogleSignIn();
 });
 
+
+function teacherManagementMarkup() {
+  return `
+    <section class="teacher-management">
+      <h2>Teacher Management</h2>
+      <p>Register teachers, manage portal authorization and control account status.</p>
+
+      <form class="teacher-form" onsubmit="registerTeacher(event)">
+        <input id="newTeacherName" type="text" maxlength="120"
+          placeholder="Teacher full name" required>
+        <input id="newTeacherEmail" type="email"
+          placeholder="Teacher Google email" required>
+        <button class="teacher-primary" type="submit">Register Teacher</button>
+      </form>
+
+      <div class="teacher-toolbar">
+        <input id="teacherSearch" type="search"
+          placeholder="Search by name or email" oninput="filterTeacherRows()">
+        <select id="teacherStatusFilter" onchange="filterTeacherRows()">
+          <option value="ALL">All account statuses</option>
+          <option value="ACTIVE">Active accounts</option>
+          <option value="DISABLED">Deactivated accounts</option>
+        </select>
+        <select id="teacherAccessFilter" onchange="filterTeacherRows()">
+          <option value="ALL">All authorization statuses</option>
+          <option value="ACTIVE">Authorized</option>
+          <option value="REVOKED">Revoked</option>
+          <option value="NOT_AUTHORIZED">Not authorized</option>
+        </select>
+      </div>
+
+      <p id="teacherFeedback" role="status"></p>
+      <div class="teacher-table-wrap">
+        <table class="teacher-table">
+          <thead>
+            <tr><th>Teacher</th><th>Account</th><th>Authorization</th><th>Actions</th></tr>
+          </thead>
+          <tbody id="teacherTableBody">
+            <tr><td colspan="4">Loading teachers...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>`;
+}
+
 async function showDashboard(user) {
   document.getElementById("loginSection").style.display = "none";
   document.getElementById("dashboard").style.display = "block";
@@ -530,7 +641,30 @@ async function showDashboard(user) {
         </div>
 
         
-<div class="portal-controls">
+
+
+        <div class="stat-card">
+          <span>School Administrators</span>
+          <strong id="totalAdmins">—</strong>
+        </div>
+
+        <div class="stat-card">
+          <span>Classes</span>
+          <strong id="totalClasses">—</strong>
+        </div>
+
+        <div class="stat-card">
+          <span>Subjects</span>
+          <strong id="totalSubjects">—</strong>
+        </div>
+
+        <div class="stat-card">
+          <span>Mark Submissions</span>
+          <strong id="totalSubmissions">—</strong>
+        </div>
+      </div>
+
+      <div class="portal-controls">
   <h2>Portal Control</h2>
   <p>Manage online mark entry availability.</p>
 
@@ -564,45 +698,28 @@ async function showDashboard(user) {
   <p id="controlFeedback"></p>
 </div>
 
-        <div class="stat-card">
-          <span>School Administrators</span>
-          <strong id="totalAdmins">—</strong>
-        </div>
-
-        <div class="stat-card">
-          <span>Classes</span>
-          <strong id="totalClasses">—</strong>
-        </div>
-
-        <div class="stat-card">
-          <span>Subjects</span>
-          <strong id="totalSubjects">—</strong>
-        </div>
-
-        <div class="stat-card">
-          <span>Mark Submissions</span>
-          <strong id="totalSubmissions">—</strong>
-        </div>
-      </div>
-
       <div class="user-panel">
         <h2>Recent Activity</h2>
         <div id="recentActivity">Loading activity...</div>
       </div>
 
       <p id="dashboardError" class="status"></p>
+      ${teacherManagementMarkup()}
     `;
 
- await loadSuperAdminDashboard();
-await loadPortalControlSettings();
+    await loadSuperAdminDashboard();
+    await loadPortalControlSettings();
+    await loadTeacherManagement();
 
   } else if (user.role === "SCHOOL_ADMIN") {
     content.innerHTML = `
       <div class="user-panel">
         <h2>School Admin Dashboard</h2>
-        <p>School administration tools will be added here.</p>
+        <p>Manage teachers and their portal access for your school.</p>
       </div>
+      ${teacherManagementMarkup()}
     `;
+    await loadTeacherManagement();
 
   } else {
     content.innerHTML = `
@@ -882,6 +999,142 @@ async function saveLockMessage() {
   }
 }
  
+
+let teacherRecords = [];
+
+function teacherFeedback(message, isError = false) {
+  const el = document.getElementById("teacherFeedback");
+  if (!el) return;
+  el.textContent = message;
+  el.style.color = isError ? "#b42318" : "#16803c";
+}
+
+async function loadTeacherManagement() {
+  const body = document.getElementById("teacherTableBody");
+  if (!body) return;
+  body.innerHTML = '<tr><td colspan="4">Loading teachers...</td></tr>';
+
+  try {
+    const result = await portalControlRequest("listTeachers");
+    teacherRecords = result.teachers || [];
+    renderTeacherRows(teacherRecords);
+  } catch (error) {
+    body.innerHTML = '<tr><td colspan="4">Unable to load teachers.</td></tr>';
+    teacherFeedback(error.message, true);
+  }
+}
+
+function escapeTeacherText(value) {
+  return String(value ?? "").replace(/[&<>"']/g, ch => ({
+    "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;"
+  }[ch]));
+}
+
+function renderTeacherRows(items) {
+  const body = document.getElementById("teacherTableBody");
+  if (!body) return;
+
+  if (!items.length) {
+    body.innerHTML = '<tr><td colspan="4">No teachers found.</td></tr>';
+    return;
+  }
+
+  body.innerHTML = items.map(t => {
+    const accountActive = t.status === "ACTIVE";
+    const authorized = t.accessStatus === "ACTIVE";
+    const accountLabel = accountActive ? "ACTIVE" : "DISABLED";
+    const accessLabel = t.accessStatus === "NOT_AUTHORIZED"
+      ? "NOT AUTHORIZED" : t.accessStatus;
+
+    return `<tr>
+      <td><strong>${escapeTeacherText(t.displayName || "Unnamed teacher")}</strong><br>
+        <small>${escapeTeacherText(t.email)}</small></td>
+      <td><span class="teacher-pill ${accountActive ? "active" : "inactive"}">${accountLabel}</span></td>
+      <td><span class="teacher-pill ${authorized ? "active" : "inactive"}">${accessLabel}</span></td>
+      <td>
+        <button class="teacher-action"
+          onclick="changeTeacherAuthorization('${t.teacherId}',${!authorized})">
+          ${authorized ? "Revoke access" : "Authorize"}
+        </button>
+        <button class="${accountActive ? "teacher-danger" : "teacher-success"}"
+          onclick="changeTeacherStatus('${t.teacherId}','${accountActive ? "DISABLED" : "ACTIVE"}')">
+          ${accountActive ? "Deactivate" : "Activate"}
+        </button>
+      </td>
+    </tr>`;
+  }).join("");
+}
+
+function filterTeacherRows() {
+  const search = (document.getElementById("teacherSearch")?.value || "").trim().toLowerCase();
+  const status = document.getElementById("teacherStatusFilter")?.value || "ALL";
+  const access = document.getElementById("teacherAccessFilter")?.value || "ALL";
+
+  const filtered = teacherRecords.filter(t => {
+    const matchesText = !search ||
+      String(t.displayName).toLowerCase().includes(search) ||
+      String(t.email).toLowerCase().includes(search);
+    const matchesStatus = status === "ALL" || t.status === status;
+    const matchesAccess = access === "ALL" || t.accessStatus === access;
+    return matchesText && matchesStatus && matchesAccess;
+  });
+  renderTeacherRows(filtered);
+}
+
+async function registerTeacher(event) {
+  event.preventDefault();
+  const displayName = document.getElementById("newTeacherName").value.trim();
+  const email = document.getElementById("newTeacherEmail").value.trim();
+
+  try {
+    const result = await portalControlRequest("saveTeacher", {displayName, email});
+    document.getElementById("newTeacherName").value = "";
+    document.getElementById("newTeacherEmail").value = "";
+    teacherFeedback(result.message || "Teacher registered.");
+    await loadTeacherManagement();
+    if (typeof loadSuperAdminDashboard === "function" &&
+        document.getElementById("totalTeachers")) {
+      await loadSuperAdminDashboard();
+    }
+  } catch (error) {
+    teacherFeedback(error.message, true);
+  }
+}
+
+async function changeTeacherAuthorization(teacherId, authorized) {
+  const prompt = authorized ? "Authorize this teacher to use the portal?" :
+    "Revoke this teacher's portal authorization?";
+  if (!confirm(prompt)) return;
+
+  try {
+    const result = await portalControlRequest("updateTeacherAuthorization", {
+      teacherId, authorized
+    });
+    teacherFeedback(result.message);
+    await loadTeacherManagement();
+  } catch (error) {
+    teacherFeedback(error.message, true);
+  }
+}
+
+async function changeTeacherStatus(teacherId, status) {
+  const label = status === "ACTIVE" ? "activate" : "deactivate";
+  if (!confirm("Are you sure you want to " + label + " this teacher account?")) return;
+
+  try {
+    const result = await portalControlRequest("updateTeacherStatus", {
+      teacherId, status
+    });
+    teacherFeedback(result.message);
+    await loadTeacherManagement();
+    if (document.getElementById("totalTeachers")) {
+      await loadSuperAdminDashboard();
+    }
+  } catch (error) {
+    teacherFeedback(error.message, true);
+  }
+}
+
 async function logoutUser() {
   const token = sessionStorage.getItem("wes_session_token");
 
