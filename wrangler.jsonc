@@ -1,0 +1,8 @@
+{
+  "name": "widnae-et-stella-portal",
+  "compatibility_date": "2025-11-01",
+  "workers_dev": true,
+  "assets": {
+    "directory": "./public"
+  }
+}
