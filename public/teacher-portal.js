@@ -4,6 +4,17 @@
   const $ = id => document.getElementById(id);
   const esc = v => escapeTeacherText(v);
 
+  /* Show the server's real error text (the Worker uses "message", the backend uses "error"). */
+  window.portalControlRequest = async function (action, extra = {}) {
+    const res = await fetch(API_URL, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action, payload: { token: sessionStorage.getItem("wes_session_token"), ...extra } })
+    });
+    let data = {}; try { data = await res.json(); } catch (e) { /* not JSON */ }
+    if (!res.ok || !data.ok) throw new Error(data.error || data.message || "Request failed (" + res.status + ").");
+    return data.result;
+  };
+
   const css = document.createElement("style");
   css.textContent = `
     .tp-btn{border:0;border-radius:7px;padding:10px 14px;cursor:pointer;font-weight:600;background:#102b50;color:#fff}
