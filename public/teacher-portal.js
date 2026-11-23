@@ -87,46 +87,21 @@
     await loadPortalState();
   }
 
-  async function renderHome() {
-    $("dashboardContent").innerHTML = `
-      <div class="user-panel">
-        <h2>Teacher Dashboard</h2>
-        <p id="tpMustChange" style="color:#b42318;font-weight:600;margin-bottom:10px"></p>
-        <details id="tpPwBox"><summary style="cursor:pointer;font-weight:600">Change my password</summary>
-          <form id="tpPwForm" style="max-width:360px;margin-top:10px">
-            <input class="tp-input" id="tpCur" type="password" placeholder="Current password" autocomplete="current-password" required>
-            <input class="tp-input" id="tpNew" type="password" placeholder="New password (8+ characters)" autocomplete="new-password" required minlength="8">
-            <input class="tp-input" id="tpNew2" type="password" placeholder="Repeat new password" autocomplete="new-password" required>
-            <button class="tp-btn" type="submit">Save password</button>
-            <p id="tpPwMsg" style="margin-top:8px;font-size:13px"></p>
-          </form>
-        </details>
-      </div>
-      <section class="assignment-management">
-        <h2>My classes and subjects</h2>
-        <p id="tpMyMsg">Click a class to enter marks. A <span class="tp-tick">✓</span> means you marked it as complete.</p>
-        <div class="assignment-table-wrap"><table class="assignment-table">
-          <thead><tr><th>Class</th><th>Subject</th><th>Coef</th><th>Marks by sequence</th><th></th></tr></thead>
-          <tbody id="tpMyBody"><tr><td colspan="5">Loading...</td></tr></tbody>
-        </table></div>
-      </section>`;
-    if (tpUser && tpUser.mustChangePassword) {
-      $("tpMustChange").textContent = "Please choose your own password before you continue.";
-      $("tpPwBox").open = true;
-    }
-    $("tpPwForm").addEventListener("submit", async e => {
-      e.preventDefault();
-      const m = $("tpPwMsg"); m.style.color = "#53647a";
-      if ($("tpNew").value !== $("tpNew2").value) { m.style.color = "#b42318"; m.textContent = "The two new passwords do not match."; return; }
-      try {
-        const r = await portalControlRequest("changeMyPassword", { currentPassword: $("tpCur").value, newPassword: $("tpNew").value });
-        m.style.color = "#16803c"; m.textContent = r.message || "Password changed.";
-        $("tpMustChange").textContent = ""; if (tpUser) tpUser.mustChangePassword = false; e.target.reset();
-      } catch (err) { m.style.color = "#b42318"; m.textContent = err.message; }
-    });
-    await tpLoadMine();
-  }
-
+async function renderHome() {
+  $("dashboardContent").innerHTML = `
+    <div class="user-panel">
+      <h2>Teacher Dashboard</h2>
+    </div>
+    <section class="assignment-management">
+      <h2>My classes and subjects</h2>
+      <p id="tpMyMsg">Click a class to enter marks. A <span class="tp-tick">✓</span> means you marked it as complete.</p>
+      <div class="assignment-table-wrap"><table class="assignment-table">
+        <thead><tr><th>Class</th><th>Subject</th><th>Coef</th><th>Marks by sequence</th><th></th></tr></thead>
+        <tbody id="tpMyBody"><tr><td colspan="5">Loading...</td></tr></tbody>
+      </table></div>
+    </section>`;
+  await tpLoadMine();
+}
   async function tpLoadMine() {
     try {
       const r = await portalControlRequest("getMyAssignments");
