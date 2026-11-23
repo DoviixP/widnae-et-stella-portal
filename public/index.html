@@ -725,7 +725,8 @@ const ADMIN_MENUS = {
   ],
   SCHOOL_ADMIN: [
     { id: "teachers",    icon: "👩‍🏫", label: "Teacher Management" },
-    { id: "assignments", icon: "📚", label: "Assignments" }
+    { id: "assignments", icon: "📚", label: "Assignments" },
+     { id: "portal",      icon: "🔒", label: "Portal Control" },
   ]
 };
 
@@ -817,6 +818,9 @@ async function showDashboard(user) {
             <p id="dashboardError" class="status"></p>
           </div>
 
+          
+          ` : ""}
+
           <div id="section-portal" class="section-panel">
             <div class="portal-controls">
               <h2>Portal Control</h2>
@@ -851,7 +855,6 @@ async function showDashboard(user) {
               <p id="controlFeedback"></p>
             </div>
           </div>
-          ` : ""}
 
           <div id="section-teachers" class="section-panel">
             ${teacherManagementMarkup()}
@@ -868,8 +871,9 @@ async function showDashboard(user) {
 
     if (isSuper) {
       await loadSuperAdminDashboard();
-      await loadPortalControlSettings();
+      
     }
+    await loadPortalControlSettings();
     await loadTeacherManagement();
     await loadTeacherAssignments();
 
