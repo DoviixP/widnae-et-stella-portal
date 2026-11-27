@@ -409,6 +409,13 @@
       border-radius: 7px;
       background: #fff;
     }
+    .teacher-share { background: #fff4e0; color: #9a5b00; margin: 2px; }
+.share-box { display: none; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+.share-box.open { display: flex; }
+.share-box select {
+  min-width: 170px; padding: 8px 10px;
+  border: 1px solid #d8dee8; border-radius: 7px; background: #fff;
+}
     .assignment-form button, .assignment-table button {
       border: 0;
       border-radius: 7px;
@@ -1341,18 +1348,70 @@ function renderTeacherAssignments() {
     body.innerHTML = '<tr><td colspan="5">No teacher assignments yet.</td></tr>';
     return;
   }
+
   body.innerHTML = items.map(a => {
     const active = a.status === "ACTIVE";
+    const aid = escapeTeacherText(a.assignmentId);
+
+    // Teachers who can still receive this class-subject
+    let shareHtml = "";
+    if (active) {
+      const already = new Set(items
+        .filter(x => x.classSubjectId === a.classSubjectId && x.status === "ACTIVE")
+        .map(x => x.teacherId));
+      const options = (teacherAssignmentData.teachers || [])
+        .filter(t => !already.has(t.teacherId))
+        .map(t => `<option value="${escapeTeacherText(t.teacherId)}">${escapeTeacherText(t.name || t.username || t.email)}</option>`)
+        .join("");
+
+      shareHtml = `
+        <button class="teacher-share" onclick="toggleShareBox('${aid}')">Share with</button>
+        <div class="share-box" id="shareBox-${aid}">
+          <select id="shareSelect-${aid}">
+            <option value="">Select teacher</option>${options}
+          </select>
+          <button class="teacher-primary"
+            onclick="confirmShare('${aid}','${escapeTeacherText(a.classSubjectId)}')">Share</button>
+          <button class="teacher-action" onclick="toggleShareBox('${aid}')">Cancel</button>
+        </div>`;
+    }
+
     return `<tr>
       <td><strong>${escapeTeacherText(a.teacherName)}</strong><br><small>${escapeTeacherText(a.teacherEmail)}</small></td>
       <td>${escapeTeacherText(a.className)}</td>
       <td>${escapeTeacherText(a.subjectName)}</td>
       <td><span class="teacher-pill ${active ? "active" : "inactive"}">${active ? "ACTIVE" : "REMOVED"}</span></td>
-      <td><button class="${active ? "teacher-danger" : "teacher-success"}"
-        onclick="setTeacherAssignmentStatus('${escapeTeacherText(a.assignmentId)}','${active ? "INACTIVE" : "ACTIVE"}')">
-        ${active ? "Remove" : "Restore"}</button></td>
+      <td>
+        <button class="${active ? "teacher-danger" : "teacher-success"}"
+          onclick="setTeacherAssignmentStatus('${aid}','${active ? "INACTIVE" : "ACTIVE"}')">
+          ${active ? "Remove" : "Restore"}</button>
+        ${shareHtml}
+      </td>
     </tr>`;
   }).join("");
+}
+
+function toggleShareBox(assignmentId) {
+  const box = document.getElementById("shareBox-" + assignmentId);
+  if (!box) return;
+  const willOpen = !box.classList.contains("open");
+  document.querySelectorAll(".share-box.open").forEach(b => b.classList.remove("open"));
+  if (willOpen) box.classList.add("open");
+}
+
+async function confirmShare(assignmentId, classSubjectId) {
+  const teacherId = document.getElementById("shareSelect-" + assignmentId)?.value;
+  if (!teacherId) {
+    assignmentFeedback("Select the teacher to share this class and subject with.", true);
+    return;
+  }
+  try {
+    const result = await portalControlRequest("saveTeacherAssignment", { teacherId, classSubjectId });
+    assignmentFeedback(result.message || "Class and subject shared.");
+    await loadTeacherAssignments();
+  } catch (error) {
+    assignmentFeedback(error.message, true);
+  }
 }
 
 async function createTeacherAssignment(event) {
